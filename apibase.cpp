@@ -1,6 +1,7 @@
 #include "apibase.h"
 #include <QSslConfiguration>
 
+
 APIBase::APIBase(QObject *parent)
     : QObject(parent)
 {
@@ -16,6 +17,7 @@ APIBase::~APIBase()
 
 }
 
+//====================================
 void APIBase::getRequest(QUrl url){
 
     get(url);
@@ -23,6 +25,17 @@ void APIBase::getRequest(QUrl url){
 
 void APIBase::putPatch(QUrl url, const QByteArray &data) {
     patch(url, data);
+}
+//====================================
+
+QNetworkRequest APIBase::createRequest(const QUrl &url) const {
+    QSslConfiguration config = QSslConfiguration::defaultConfiguration();
+    config.setProtocol(QSsl::TlsV1_2);
+    config.setPeerVerifyMode(QSslSocket::VerifyNone);
+
+    QNetworkRequest request = QNetworkRequest(url);
+    request.setSslConfiguration(config);
+    return request;
 }
 
 void APIBase::replyFinished(QNetworkReply *reply)
@@ -32,10 +45,6 @@ void APIBase::replyFinished(QNetworkReply *reply)
         qDebug() << "APIBase::replyFinished" << reply->error() << reply->errorString();
         emit replyError(reply, reply->error(), reply->errorString());
     }
-    QString data = reply->readAll();
-    qDebug() << "data: " << data;
-
-//    emit replyToQML(data);
 }
 
 void APIBase::handleReplyError(QNetworkReply::NetworkError error)
@@ -72,11 +81,8 @@ void APIBase::setRequestHeaders(QNetworkRequest *request)
 
 void APIBase::connectReplyToErrors(QNetworkReply *reply)
 {
-    connect(reply, SIGNAL(error(QNetworkReply::NetworkError)),
-            this,   SLOT(handleReplyError(QNetworkReply::NetworkError)));
-
-    connect(reply, &QNetworkReply::sslErrors,
-            this, &APIBase::handleSslErrors);
+    connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(handleReplyError(QNetworkReply::NetworkError)));
+    connect(reply, &QNetworkReply::sslErrors, this, &APIBase::handleSslErrors);
 }
 
 bool APIBase::checkReplyIsError(QNetworkReply *reply)
@@ -85,9 +91,7 @@ bool APIBase::checkReplyIsError(QNetworkReply *reply)
         qDebug() << reply->rawHeaderList();
         qDebug() << reply->bytesAvailable() << reply->errorString();
         return true;
-    }
-    else
-    {
+    } else {
         return false;
     }
 }
@@ -136,16 +140,8 @@ void APIBase::setKnownHeaderValue(APIBase::KnownHeaders code, QByteArray value)
 
 QNetworkReply *APIBase::get(QUrl url)
 {
-    QSslConfiguration config =QSslConfiguration::defaultConfiguration();
-    config.setProtocol(QSsl::TlsV1_2);
-    config.setPeerVerifyMode(QSslSocket::VerifyNone);
-    QNetworkRequest request(url);
-    request.setSslConfiguration(config);
-    request.setRawHeader("Authorization","7c6670a4f00a5ef75de0899d957f7621abf85574");
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
-
-
-
 
     QNetworkReply *reply = m_nam.get(request);
     connectReplyToErrors(reply);
@@ -154,7 +150,7 @@ QNetworkReply *APIBase::get(QUrl url)
 
 QNetworkReply *APIBase::post(QUrl url)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.sendCustomRequest(request, "POST");
@@ -164,7 +160,7 @@ QNetworkReply *APIBase::post(QUrl url)
 
 QNetworkReply *APIBase::post(QUrl url, QIODevice *data)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.post(request, data);
@@ -174,7 +170,7 @@ QNetworkReply *APIBase::post(QUrl url, QIODevice *data)
 
 QNetworkReply *APIBase::post(QUrl url,const QByteArray &data)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.post(request, data);
@@ -184,7 +180,7 @@ QNetworkReply *APIBase::post(QUrl url,const QByteArray &data)
 
 QNetworkReply *APIBase::post(QUrl url, QHttpMultiPart *multiPart)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.post(request, multiPart);
@@ -194,7 +190,7 @@ QNetworkReply *APIBase::post(QUrl url, QHttpMultiPart *multiPart)
 
 QNetworkReply *APIBase::put(QUrl url)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.sendCustomRequest(request, "PUT");
@@ -204,7 +200,7 @@ QNetworkReply *APIBase::put(QUrl url)
 
 QNetworkReply *APIBase::put(QUrl url, QIODevice *data)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.put(request, data);
@@ -214,7 +210,7 @@ QNetworkReply *APIBase::put(QUrl url, QIODevice *data)
 
 QNetworkReply *APIBase::put(QUrl url, const QByteArray &data)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.put(request, data);
@@ -224,7 +220,7 @@ QNetworkReply *APIBase::put(QUrl url, const QByteArray &data)
 
 QNetworkReply *APIBase::put(QUrl url, QHttpMultiPart *multiPart)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.put(request, multiPart);
@@ -234,7 +230,7 @@ QNetworkReply *APIBase::put(QUrl url, QHttpMultiPart *multiPart)
 
 QNetworkReply *APIBase::patch(QUrl url)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.sendCustomRequest(request, "PATCH");
@@ -244,7 +240,7 @@ QNetworkReply *APIBase::patch(QUrl url)
 
 QNetworkReply *APIBase::patch(QUrl url, QIODevice *data)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.sendCustomRequest(request, "PATCH", data);
@@ -254,13 +250,7 @@ QNetworkReply *APIBase::patch(QUrl url, QIODevice *data)
 
 QNetworkReply *APIBase::patch(QUrl url, const QByteArray &data)
 {
-    QSslConfiguration config =QSslConfiguration::defaultConfiguration();
-    config.setProtocol(QSsl::TlsV1_2);
-    config.setPeerVerifyMode(QSslSocket::VerifyNone);
-    QNetworkRequest request(url);
-    request.setSslConfiguration(config);
-    request.setRawHeader("Authorization","7c6670a4f00a5ef75de0899d957f7621abf85574");
-    request.setRawHeader("Content-Type","application/json");
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.sendCustomRequest(request, "PATCH", data);
@@ -268,9 +258,25 @@ QNetworkReply *APIBase::patch(QUrl url, const QByteArray &data)
     return reply;
 }
 
+//QNetworkReply *APIBase::patch(QUrl url, const QByteArray &data)
+//{
+//    QSslConfiguration config =QSslConfiguration::defaultConfiguration();
+//    config.setProtocol(QSsl::TlsV1_2);
+//    config.setPeerVerifyMode(QSslSocket::VerifyNone);
+//    QNetworkRequest request(url);
+//    request.setSslConfiguration(config);
+//    request.setRawHeader("Authorization","7c6670a4f00a5ef75de0899d957f7621abf85574");
+//    request.setRawHeader("Content-Type","application/json");
+//    setRequestHeaders(&request);
+
+//    QNetworkReply *reply = m_nam.sendCustomRequest(request, "PATCH", data);
+//    connectReplyToErrors(reply);
+//    return reply;
+//}
+
 QNetworkReply *APIBase::patch(QUrl url, QHttpMultiPart *multiPart)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.sendCustomRequest(request, "PATCH", multiPart);
@@ -280,7 +286,7 @@ QNetworkReply *APIBase::patch(QUrl url, QHttpMultiPart *multiPart)
 
 QNetworkReply *APIBase::deleteResource(QUrl url)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.deleteResource(request);
@@ -290,7 +296,7 @@ QNetworkReply *APIBase::deleteResource(QUrl url)
 
 QNetworkReply *APIBase::head(QUrl url)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.head(request);
@@ -300,7 +306,7 @@ QNetworkReply *APIBase::head(QUrl url)
 
 QNetworkReply *APIBase::options(QUrl url)
 {
-    QNetworkRequest request(url);
+    QNetworkRequest request = createRequest(url);
     setRequestHeaders(&request);
 
     QNetworkReply *reply = m_nam.sendCustomRequest(request, "OPTIONS");

@@ -1,28 +1,25 @@
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
+#include "httprequest.h"
 
-
-#include "mainwindow.h"
-#include "apibase.h"
-#include "test.h"
-#include <QApplication>
-#include <QtNetwork/QtNetwork>
-#include <QDebug>
-
-void replyFinished(QNetworkReply *reply);
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    MainWindow w;
-    w.show();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
 
-    APIBase *apibase = new APIBase();
-//    apibase->getRequest(QUrl("https://google.com"));
-//    QObject::connect(apibase, &Test::finished, &a, replyFinished);
+    QGuiApplication app(argc, argv);
 
-    return a.exec();
-}
+    HttpRequest::declareQML();
 
-void replyFinished(QString reply){
-//    QString data = reply->readAll();
-    qDebug()<< "data: "<<reply;
+    QQmlApplicationEngine engine;
+    const QUrl url(QStringLiteral("qrc:/main.qml"));
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [url](QObject *obj, const QUrl &objUrl) {
+        if (!obj && url == objUrl)
+            QCoreApplication::exit(-1);
+    }, Qt::QueuedConnection);
+    engine.load(url);
 
+    return app.exec();
 }
